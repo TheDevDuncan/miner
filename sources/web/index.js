@@ -80,5 +80,36 @@ async function fetchStatsAndDisplay() {
     }
 }
 
+async function pauseMiner(){
+  if (document.querySelector('.pause-btn').innerHTML == "Pause") {
+    // Pause the miner
+        try {
+        const response = await fetch('http://127.0.0.1:8080/api/pause_miner');
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        const data = await response.json();
+        console.log(data);
+            document.querySelector('.pause-btn').innerHTML = 'Resume';
+        }
+        catch(error){
+          document.querySelector('.updated').textContent = 'Failed to Pause the miner';
+        }
+
+  }else{
+    // Resume the Miner
+            try {
+        const response = await fetch('http://127.0.0.1:8080/api/resume_miner');
+        if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+        const data = await response.json();
+        console.log(data);
+        document.querySelector('.pause-btn').innerHTML = 'Pause';
+        }
+        catch(error){
+          document.querySelector('.updated').textContent = 'Failed to resume the miner';
+        }
+  
+  }
+  
+}
+
 fetchStatsAndDisplay();
 setInterval(fetchStatsAndDisplay, 5000);

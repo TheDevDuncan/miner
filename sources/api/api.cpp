@@ -89,6 +89,16 @@ void api::ServerAPI::onMessage(
         onWebGetStats(socket, response);
         response.result(boost_http::status::ok);
     }
+    else if ("/api/pause_miner" == target)
+    {
+        onPauseMiner(socket, response);
+        response.result(boost_http::status::ok);
+    }
+    else if ("/api/resume_miner" == target)
+    {
+        onResumeMiner(socket, response);
+        response.result(boost_http::status::ok);
+    }
     else
     {
         response.result(boost_http::status::not_found);
@@ -271,6 +281,59 @@ void api::ServerAPI::onWebGetStats(
     root["temp"] = temp;
     root["fan"] = fan;
     root["shares"] = shares;
+
+    ////////////////////////////////////////////////////////////////////////////
+    response.body() = boost::json::serialize(root);
+    response.prepare_payload();
+    response.set("Access-Control-Allow-Origin", "*");
+
+    ////////////////////////////////////////////////////////////////////////////
+    boost::beast::http::write(socket, response);
+}
+
+void api::ServerAPI::onPauseMiner(
+    boost_socket& socket,
+    boost_response& response)
+{
+    ////////////////////////////////////////////////////////////////////////////
+    std::string version
+    {
+        std::to_string(common::VERSION_MAJOR)
+        + "."
+        + std::to_string(common::VERSION_MINOR)
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    boost::json::object root;
+
+    root["pause"] = true;
+
+    ////////////////////////////////////////////////////////////////////////////
+    response.body() = boost::json::serialize(root);
+    response.prepare_payload();
+    response.set("Access-Control-Allow-Origin", "*");
+
+    ////////////////////////////////////////////////////////////////////////////
+    boost::beast::http::write(socket, response);
+}
+
+
+void api::ServerAPI::onResumeMiner(
+    boost_socket& socket,
+    boost_response& response)
+{
+    ////////////////////////////////////////////////////////////////////////////
+    std::string version
+    {
+        std::to_string(common::VERSION_MAJOR)
+        + "."
+        + std::to_string(common::VERSION_MINOR)
+    };
+
+    ////////////////////////////////////////////////////////////////////////////
+    boost::json::object root;
+
+    root["pause"] = false;
 
     ////////////////////////////////////////////////////////////////////////////
     response.body() = boost::json::serialize(root);

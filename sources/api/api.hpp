@@ -47,8 +47,12 @@ namespace api
         void onHiveOSGetStats(boost_socket& socket,
                               boost_response& response);
         void onHiveOSGetTotalHashrate(boost_socket& socket,
-                                      boost_response& response);
+                                boost_response& response);
         void onWebGetStats(boost_socket& socket,
-                           boost_response& response);
+                                    boost_response& response);
+        void onPauseMiner(boost_socket& socket,
+                                        boost_response& response);
+        void onResumeMiner(boost_socket& socket,
+                                    boost_response& response);
     };
 }
