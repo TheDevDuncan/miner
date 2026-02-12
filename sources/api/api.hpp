@@ -49,7 +49,7 @@ namespace api
         void onHiveOSGetTotalHashrate(boost_socket& socket,
                                 boost_response& response);
         void onPauseMiner(boost_socket& socket, boost_response& response,
-                                boost::beast::http::request<boost::beast::http::string_body> const& request
+                                boost_request const& request
                                 );
         void onMinerStatus(boost_socket& socket,
                                     boost_response& response);

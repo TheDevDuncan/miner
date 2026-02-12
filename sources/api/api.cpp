@@ -8,6 +8,7 @@
 #include <common/cast.hpp>
 #include <common/custom.hpp>
 #include <common/log/log.hpp>
+#include <common/pause_state.hpp>
 #include <device/device_manager.hpp>
 
 
@@ -271,7 +272,9 @@ void api::ServerAPI::onMinerStatus(
     shares.push_back(0);                         // share invalid
     shares.push_back(sharesInvalidGpus.c_str()); // shares invalid by gpus
 
-    root["paused"] = true;
+    bool paused = g_paused.load(std::memory_order::relaxed);
+
+    root["paused"] = paused;
     root["hs"] = hs;
     root["temp"] = temp;
     root["fan"] = fan;
@@ -289,27 +292,50 @@ void api::ServerAPI::onMinerStatus(
 void api::ServerAPI::onPauseMiner(
     boost_socket& socket,
     boost_response& response,
-    boost::beast::http::request<boost::beast::http::string_body> const& request
+    boost_request const& request
 )
 {
-    bool paused = false;
+bool paused = false; 
 
-    try {
-        auto body = boost::json::parse(request.body());
-        if(body.is_object() && body.as_object().contains("paused"))
-            paused = body.at("paused").as_bool();
-    } catch (std::exception& e) {
-        logErr() << "Invalid JSON in onPauseMiner: " << e.what();
-        // You can still return a safe response
+std::string bodyStr = request.body();
+if (!bodyStr.empty())
+{
+    try
+    {
+
+        boost::json::value jv = boost::json::parse(bodyStr);
+
+
+        if (jv.is_object())
+        {
+            auto& obj = jv.as_object();
+            auto it = obj.find("paused");
+            if (it != obj.end() && it->value().is_bool())
+            {
+                paused = it->value().as_bool();
+            }
+        }
     }
+    catch (boost::json::system_error& e)
+    {
+        logErr() << "[api::ServerAPI::onPauseMiner] Invalid JSON: " << e.what();
+    }
+}
+else
+{
+    logInfo() << "[api::ServerAPI::onPauseMiner] Empty request body, using default paused=false";
+}
 
-    // Build JSON response
+    g_paused.store(paused);
+
     boost::json::object root;
     root["paused"] = paused;
 
     response.body() = boost::json::serialize(root);
     response.prepare_payload();
     response.set("Access-Control-Allow-Origin", "*");
+
+
 
     boost::beast::http::write(socket, response);
 }
