@@ -723,3 +723,23 @@ stratum::Stratum* device::DeviceManager::getOrCreateStratum(
     ////////////////////////////////////////////////////////////////////////////
     return stratum;
 }
+
+bool device::DeviceManager::pauseDevices()
+{
+    for (device::Device* const device : getDevices())
+    {
+        if (!device) continue;
+
+        if (!device->isSleeping())
+        {
+            device->pause();
+            return true;
+        }
+        else
+        {
+            device->resume();
+            return false;
+        }
+
+    }
+}
