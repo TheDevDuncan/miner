@@ -473,10 +473,6 @@ void device::Device::pause()
     sleeping.store(true,boost::memory_order::seq_cst);         
     alive.store(false, boost::memory_order::seq_cst); 
 
-    if (threadDoWork.joinable()) {
-        threadDoWork.join();
-    }
-
     synchronizer.memory.reset();
     synchronizer.constant.reset();
 
