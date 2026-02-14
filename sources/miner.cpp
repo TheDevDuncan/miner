@@ -28,17 +28,10 @@ void keyboardListener()
         if (_kbhit())
         {
             char c = _getch();
-            if (c == 'p')
+            if (c == 'p' || c == 'P')
             {
-                for (device::Device* device : deviceManager.getDevices())
-                {
-                    if (!device) continue;
-
-                    if (!device->isSleeping())
-                        device->pause();
-                    else
-                        device->resume();
-                }
+                deviceManager.disconnectFromPools();
+                deviceManager.pauseDevices();
             }
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
