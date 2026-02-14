@@ -60,7 +60,6 @@ namespace device
         void kill(device::KILL_STATE const state);
         bool isAlive() const;
         bool isComputing() const;
-        void togglePause();
         bool isSleeping() const;
         void pause();
         void resume();
