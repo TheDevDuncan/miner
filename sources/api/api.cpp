@@ -244,11 +244,15 @@ void api::ServerAPI::onMinerStatus(
     ////////////////////////////////////////////////////////////////////////////
     auto& deviceManager{ device::DeviceManager::instance() };
     std::vector<device::Device*> devices{ deviceManager.getDevices() };
-
+    bool paused = false;
     for (size_t i = 0; i < devices.size(); ++i)
     {
         device::Device* device = devices[i];
-
+        if (true == device->isSleeping())
+        {
+            paused = true;
+        }
+        
         boost::json::object gpu{};
         
         deviceManager.fetchDeviceStatsJson(device, gpu);
@@ -269,6 +273,8 @@ void api::ServerAPI::onMinerStatus(
     }
 
     root["gpus"] = gpus;
+    root["paused"] = paused;
+    
 
     ////////////////////////////////////////////////////////////////////////////
     response.body() = boost::json::serialize(root);
