@@ -316,7 +316,7 @@ bool device::DeviceManager::initializeNvidia()
     CUDA_ER(cudaGetDeviceCount(&numberDevice));
 
     ////////////////////////////////////////////////////////////////////////////
-    if (0u == numberDevice)
+    if (0 == numberDevice)
     {
         logInfo() << "GPU NVIDA not found";
         return true;
@@ -326,21 +326,19 @@ bool device::DeviceManager::initializeNvidia()
     for (int32_t i{ 0 }; i < numberDevice; ++i)
     {
         ////////////////////////////////////////////////////////////////////////////
+        cudaError_t codeError{ cudaSuccess };
         device::DeviceNvidia* device{ NEW(device::DeviceNvidia) };
-        device->deviceType = device::DEVICE_TYPE::NVIDIA;
 
         ////////////////////////////////////////////////////////////////////////////
-        cudaError_t codeError{ cudaSuccess };
-
         codeError = cudaGetDeviceProperties(&device->properties, i);
         if (cudaSuccess != codeError)
         {
             logErr() << "[" << codeError << "]" << __FUNCTION__ << cudaGetErrorString(codeError);
-            delete device;
-            device = nullptr;
+            SAFE_DELETE(device);
             continue;
         }
 
+        ////////////////////////////////////////////////////////////////////////////
         size_t freeMem{ 0u };
         size_t totalMem{ 0u };
         codeError = cudaMemGetInfo(&freeMem, &totalMem);
@@ -350,13 +348,14 @@ bool device::DeviceManager::initializeNvidia()
         }
 
         ////////////////////////////////////////////////////////////////////////////
+        device->deviceType = device::DEVICE_TYPE::NVIDIA;
         device->memoryAvailable = castU64(freeMem);
         device->cuIndex = castU32(i);
         device->id = castU32(devices.size());
         device->pciBus = device->properties.pciBusID;
 
         ////////////////////////////////////////////////////////////////////////////
-        if (false == profilerNvidia.init(device->id, &device->deviceNvml))
+        if (false == profilerNvidia.init(device->cuIndex, &device->deviceNvml))
         {
             device->deviceNvml = nullptr;
             profilerNvidia.valid = false;
@@ -394,16 +393,15 @@ bool device::DeviceManager::initializeAmd()
         for (uint32_t i { 0u }; i < cldevices.size(); ++i)
         {
             ////////////////////////////////////////////////////////////////////////////
-            device::DeviceAmd* device{ NEW(device::DeviceAmd) };
-            device->deviceType = device::DEVICE_TYPE::AMD;
-
-            ////////////////////////////////////////////////////////////////////////////
-            device->clDevice = cldevices.at(i);
-            if (CL_DEVICE_TYPE_GPU != device->clDevice.getInfo<CL_DEVICE_TYPE>())
+            if (CL_DEVICE_TYPE_GPU != cldevices.at(i).getInfo<CL_DEVICE_TYPE>())
             {
-                SAFE_DELETE(device);
                 continue;
             }
+
+            ////////////////////////////////////////////////////////////////////////////
+            device::DeviceAmd* device{ NEW(device::DeviceAmd) };
+            device->deviceType = device::DEVICE_TYPE::AMD;
+            device-clDevice = cldevices.at(i);
             device->id = castU32(devices.size());
 
             ////////////////////////////////////////////////////////////////////////////
@@ -610,7 +608,7 @@ void device::DeviceManager::onShareStatus(
             }
         }
 
-        uint32_t const shareID { (device->id + 1u) * stratum::Stratum::OVERCOM_NONCE };
+        uint32_t const shareID{ (device->id + 1u) * stratum::Stratum::OVERCOM_NONCE };
         if (shareID == requestID)
         {
             device->increaseShare(isValid);

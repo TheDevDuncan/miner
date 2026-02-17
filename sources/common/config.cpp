@@ -110,7 +110,6 @@ bool common::Config::loadCli(int argc, char** argv)
             log.intervalHashStats = common::min_limit(*intervalHashStats, 100u);
         }
 
-        logInfo() << "cli.isLogNewJob(): " << cli.isLogNewJob();
         log.showNewJob = cli.isLogNewJob();
 
         ////////////////////////////////////////////////////////////////////////
@@ -231,7 +230,16 @@ bool common::Config::loadCli(int argc, char** argv)
                 mining.socksPort = SocksPort;
             }
         }
+
+        auto const socksHost{ cli.getSocksHost() };
+
+        if (std::nullopt != socksHost)
+        {
+            mining.socksHost = *socksHost;
+        }
         
+        
+
         ////////////////////////////////////////////////////////////////////////
         // RAVEN MINER
         ////////////////////////////////////////////////////////////////////////
