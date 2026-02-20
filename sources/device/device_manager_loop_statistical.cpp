@@ -71,6 +71,14 @@ void device::DeviceManager::loopStatistical()
             {
                 continue;
             }
+            ///////////////////////////////////////////////////////////////////
+
+            if (device->isSleeping())
+            {
+                logInfo() << device->id << " is Sleeping...";
+                continue;
+            }
+            
  
             ///////////////////////////////////////////////////////////////////
 
