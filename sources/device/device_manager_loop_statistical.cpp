@@ -64,6 +64,7 @@ void device::DeviceManager::loopStatistical()
         bool displayable{ false };
         for (device::Device* const device : devices)
         {
+
             ///////////////////////////////////////////////////////////////////
             if (   nullptr == device
                 || false == device->isAlive())
@@ -71,6 +72,14 @@ void device::DeviceManager::loopStatistical()
                 continue;
             }
  
+            ///////////////////////////////////////////////////////////////////
+
+            if (true == device->isSleeping())
+            {
+                logInfo() << "Device " << device->id << " is sleeping...";
+                continue;
+            }
+
             ///////////////////////////////////////////////////////////////////
             if (common::PROFILE::STANDARD == config.profile)
             {
@@ -109,6 +118,9 @@ void device::DeviceManager::loopStatistical()
                 displayable = true;
             }
         }
+
+        ////////////////////////////////////////////////////////////////////////
+        
 
         ////////////////////////////////////////////////////////////////////////
         if (true == displayable)
