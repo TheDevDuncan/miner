@@ -59,6 +59,9 @@ namespace device
         void kill(device::KILL_STATE const state);
         bool isAlive() const;
         bool isComputing() const;
+        bool isSleeping() const;
+        void pause();
+        void resume();
         void update(bool const memory,
                     bool const constants,
                     stratum::StratumJobInfo const& newJobInfo);
@@ -92,6 +95,7 @@ namespace device
 
         boost::atomic_bool           alive{ false };
         boost::atomic_bool           computing{ false };
+        boost::atomic_bool           sleeping{ false };
         boost::thread                threadDoWork{};
         boost::condition_variable    notifyNewWork{};
         stratum::Stratum*            stratum{ nullptr };

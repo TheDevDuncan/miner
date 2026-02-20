@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include <common/chrono.hpp>
 #include <common/config.hpp>
 #include <common/custom.hpp>
@@ -29,6 +31,7 @@
 void device::Device::setAlgorithm(
     algo::ALGORITHM newAlgorithm)
 {
+    __TRACE();
     ////////////////////////////////////////////////////////////////////////////
     common::Config const& config { common::Config::instance() };
 
@@ -351,6 +354,7 @@ void device::Device::setAlgorithm(
         }
     }
 
+
     ////////////////////////////////////////////////////////////////////////////
     if (nullptr == resolver)
     {
@@ -435,7 +439,11 @@ void device::Device::kill(
             break;
         }
     }
+
     alive.store(false, boost::memory_order::seq_cst);
+    
+    
+    
 }
 
 
@@ -450,6 +458,46 @@ bool device::Device::isComputing() const
     return computing.load(boost::memory_order::relaxed);
 }
 
+bool device::Device::isSleeping() const
+{
+    return sleeping.load(boost::memory_order::relaxed);
+}
+
+
+
+void device::Device::pause()
+{
+    if (true == isSleeping())
+        return;
+
+    sleeping.store(true,boost::memory_order::seq_cst);         
+    //alive.store(false, boost::memory_order::seq_cst); 
+
+    synchronizer.memory.reset();
+    synchronizer.constant.reset();
+
+
+    deviceInfo() << "Device paused";
+}
+
+void device::Device::resume()
+{
+    if (false == isSleeping())
+        return;
+
+    setAlgorithm(algorithm);
+
+    sleeping.store(false, boost::memory_order::seq_cst);        
+    //alive.store(true, boost::memory_order::seq_cst);
+
+    synchronizer.memory.add(1ull);
+    synchronizer.constant.add(1ull);
+
+    cleanJob();
+    run();
+    
+    deviceInfo() << "Device resumed and mining restarted";
+}
 
 void device::Device::update(
     bool const memory,
@@ -526,6 +574,7 @@ statistical::Statistical::ShareInfo device::Device::getShare()
 
 void device::Device::run()
 {
+
     threadDoWork.interrupt();
     threadDoWork = boost::thread{ boost::bind(&device::Device::loopDoWork, this) };
 }
@@ -534,7 +583,7 @@ void device::Device::run()
 void device::Device::waitJob()
 {
     deviceDebug() << "waiting job!";
-    while (true == synchronizer.job.isEqual())
+    while (true == synchronizer.job.isEqual() && false == isSleeping())
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
@@ -550,6 +599,13 @@ void device::Device::cleanJob()
 
 bool device::Device::updateJob()
 {
+    ////////////////////////////////////////////////////////////////////////////
+    if (true == isSleeping()) 
+    {
+        return false;
+    }
+
+
     ////////////////////////////////////////////////////////////////////////////
     common::Chrono chrono{};
     bool const needUpdateJob{ synchronizer.job.isEqual() == false ? true : false };
@@ -658,8 +714,13 @@ void device::Device::loopDoWork()
     ////////////////////////////////////////////////////////////////////////////
     if (false == initialize())
     {
+        logInfo() << "Failed to initialize() in loopDoWork";
         return;
     }
+    else{
+        logInfo() << "Run to initialize() in loopDoWork successfully";
+    }
+
 
     ////////////////////////////////////////////////////////////////////////////
     if (nullptr == resolver)
@@ -667,7 +728,7 @@ void device::Device::loopDoWork()
         deviceErr() << "Cannot works, device need resolver";
         return;
     }
-
+    std::cout << "Resolver*: " << resolver << std::endl;
     ////////////////////////////////////////////////////////////////////////////
     alive.store(true, boost::memory_order::relaxed);
     waitJob();
@@ -680,9 +741,13 @@ void device::Device::loopDoWork()
     while (   true == isAlive()
            && nullptr != resolver)
     {
+        if (true == isSleeping())
+            break;
+        
+        
         // Check and update the job.
         // Do not compute directly after update device.
-        // A new job can spawn during the update.
+        // A new job can spawn during the update.        
         if (true == updateJob())
         {
             continue;
@@ -705,7 +770,7 @@ void device::Device::loopDoWork()
 
     ////////////////////////////////////////////////////////////////////////////
     cleanUp();
-
+    SAFE_DELETE(resolver);
     ////////////////////////////////////////////////////////////////////////////
     computing.store(false, boost::memory_order::seq_cst);
 }

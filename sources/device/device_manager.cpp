@@ -503,6 +503,26 @@ void device::DeviceManager::onUpdateJob(
     uint32_t const stratumUUID,
     stratum::StratumJobInfo const& newJobInfo)
 {
+    bool isSleeping = false;
+
+    for (device::Device* const device : devices)
+    {
+        if (nullptr != device)
+        {
+            if (device->isSleeping())
+            {
+                isSleeping = true;
+                break;
+            }
+            
+        }
+    }
+
+    if (true == isSleeping)
+    {
+        return;
+    }
+    
     ////////////////////////////////////////////////////////////////////////////
     UNIQUE_LOCK(mtxJobInfo);
 
@@ -720,4 +740,32 @@ stratum::Stratum* device::DeviceManager::getOrCreateStratum(
 
     ////////////////////////////////////////////////////////////////////////////
     return stratum;
+}
+
+bool device::DeviceManager::pauseDevices()
+{
+    bool anyRunning = false;
+
+    for (device::Device* const device : getDevices())
+    {
+        if (!device) continue;
+
+        if (!device->isSleeping())
+        {
+            anyRunning = true;
+            break;
+        }
+    }
+
+    for (device::Device* const device : getDevices())
+    {
+        if (!device) continue;
+
+        if (anyRunning)
+            device->pause();
+        else
+            device->resume();
+    }
+
+    return anyRunning;
 }

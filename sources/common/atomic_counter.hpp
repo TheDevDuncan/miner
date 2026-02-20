@@ -43,5 +43,12 @@ namespace common
         {
             last = value;
         }
+
+        void reset()
+        {
+            current.store(T{0}, boost::memory_order::seq_cst);
+            last = T{0};
+        }
+
     };
 }
