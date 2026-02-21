@@ -55,7 +55,21 @@ bool device::DeviceNvidia::initialize()
 
 void device::DeviceNvidia::cleanUp()
 {
+    ///////////////////////////////////////
+    for (auto& stream : cuStream)
+    {
+        if (stream)
+        {
+            cuStreamDestroy(stream);
+            stream = nullptr;
+        }
+    }
+      
+    ///////////////////////////////////////
 
+    cuCtxDestroy(cuContext);
+
+    ///////////////////////////////////////
     cudaError_t cuCodeError{ cudaDeviceReset() };
     if (cudaSuccess != cuCodeError)
     {
@@ -64,19 +78,7 @@ void device::DeviceNvidia::cleanUp()
             << cudaGetErrorString(cuCodeError);
     }
    
-    if (cuContext)
-    {
-        CUcontext current = nullptr;
-        cuCtxGetCurrent(&current);
 
-        if (current == cuContext)
-        {
-            cuCtxSetCurrent(nullptr);
-        }
-
-        cuCtxDestroy(cuContext);
-        cuContext = nullptr;
-    }
 
 }
 #endif
