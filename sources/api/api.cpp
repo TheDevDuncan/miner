@@ -33,27 +33,49 @@ bool api::ServerAPI::bind()
 
 void api::ServerAPI::loopAccept()
 {
-    namespace boost_http = boost::beast::http;
-
-    boost_io_context ioContext{};
-    boost_acceptor acceptor{ ioContext, { boost_tcp::v4(), castU16(port) } };
-
-    while (true == alive.load(boost::memory_order::relaxed))
+    try
     {
-        ////////////////////////////////////////////////////////////////////////
-        boost_socket socket{ ioContext };
-        acceptor.accept(socket);
+        namespace boost_http = boost::beast::http;
 
-        ////////////////////////////////////////////////////////////////////////
-        boost::beast::flat_buffer buffer{};
-        boost_http::request<boost_http::string_body> request{};
-        boost_http::read(socket, buffer, request);
+        boost_io_context ioContext{};
+        boost_acceptor acceptor{ ioContext, { boost_tcp::v4(), castU16(port) } };
 
-        ////////////////////////////////////////////////////////////////////////
-        onMessage(socket, request);
+        
+        while (alive.load(boost::memory_order::relaxed))
+        {
+            boost_socket socket{ ioContext };
+            acceptor.accept(socket);
 
-        ////////////////////////////////////////////////////////////////////////
-        socket.shutdown(boost_tcp::socket::shutdown_send);
+            boost_thread(
+                [this, s = std::move(socket)]() mutable
+                {
+                    try
+                    {
+                        namespace boost_http = boost::beast::http;
+
+                        boost::beast::flat_buffer buffer{};
+                        boost_http::request<boost_http::string_body> request{};
+
+                        boost_http::read(s, buffer, request);
+
+                        onMessage(s, request);
+
+                        s.shutdown(boost_tcp::socket::shutdown_send);
+                    }
+                    catch (std::exception const& e)
+                    {
+                        logErr() << "API session error: " << e.what();
+                    }
+                }
+            ).detach();
+        }
+
+
+
+    }
+    catch (std::exception const& e)
+    {
+        logErr() << "API accept loop crashed: " << e.what();
     }
 }
 
@@ -64,41 +86,42 @@ void api::ServerAPI::onMessage(
 {
     namespace boost_http = boost::beast::http;
 
-    ////////////////////////////////////////////////////////////////////////
     boost_string_view target{ request.base().target() };
 
-    ////////////////////////////////////////////////////////////////////////
     boost_http::response<boost_http::string_body> response{};
     response.version(request.version());
     response.set(boost_http::field::server, "LuminousMiner API");
     response.set(boost_http::field::content_type, "application/json");
+    response.set("Access-Control-Allow-Origin", "*");
+    response.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    response.set("Access-Control-Allow-Headers", "Content-Type");
 
-    ////////////////////////////////////////////////////////////////////////
-    if ("/hiveos/getStats" == target)
+    if (request.method() == boost_http::verb::options)
     {
-        onHiveOSGetStats(socket, response);
         response.result(boost_http::status::ok);
+        response.prepare_payload();
+        boost_http::write(socket, response);
+        return;
     }
-    else if ("/hiveos/getTotalHashrate" == target)
-    {
-        onHiveOSGetTotalHashrate(socket, response);
-        response.result(boost_http::status::ok);
-    }
-    else if ("/api/miner/pause" == target)
+
+    if ("/api/miner/pause" == target)
     {
         onPauseMiner(socket, response);
-        response.result(boost_http::status::ok);
+        return;
     }
-    else if ("/api/miner/status" == target)
+
+    if ("/api/miner/status" == target)
     {
         onMinerStatus(socket, response);
-        response.result(boost_http::status::ok);
+        return;
     }
-    else
-    {
-        response.result(boost_http::status::not_found);
-    }
+
+    response.result(boost_http::status::not_found);
+    response.body() = "{}";
+    response.prepare_payload();
+    boost_http::write(socket, response);
 }
+
 
 
 void api::ServerAPI::onHiveOSGetStats(
@@ -295,7 +318,7 @@ void api::ServerAPI::onPauseMiner(
     bool paused = deviceManager.pauseDevices();
 
     boost::json::object root;
-    root["paused"] = true;
+    root["paused"] = paused;
 
     response.body() = boost::json::serialize(root);
     response.prepare_payload();
