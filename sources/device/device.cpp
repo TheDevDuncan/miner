@@ -31,7 +31,6 @@
 void device::Device::setAlgorithm(
     algo::ALGORITHM newAlgorithm)
 {
-    __TRACE();
     ////////////////////////////////////////////////////////////////////////////
     common::Config const& config { common::Config::instance() };
 
@@ -581,7 +580,6 @@ void device::Device::waitJob()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    logInfo() << "Not in waitJob() anymore";
 }
 
 
@@ -712,10 +710,6 @@ void device::Device::loopDoWork()
         logInfo() << "Failed to initialize() in loopDoWork";
         return;
     }
-    else{
-        logInfo() << "Run to initialize() in loopDoWork successfully";
-    }
-
 
     ////////////////////////////////////////////////////////////////////////////
     if (nullptr == resolver)
@@ -723,7 +717,7 @@ void device::Device::loopDoWork()
         deviceErr() << "Cannot works, device need resolver";
         return;
     }
-    std::cout << "Resolver*: " << resolver << std::endl;
+
     ////////////////////////////////////////////////////////////////////////////
     alive.store(true, boost::memory_order::relaxed);
     waitJob();

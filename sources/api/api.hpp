@@ -36,12 +36,14 @@ namespace api
         boost_thread      threadDoAccept{};
         boost_mutex       mtx{};
         boost_atomic_bool alive { false };
-
+        
         void setPort(uint32_t const _port);
         bool bind();
         void loopAccept();
 
     private:
+        std::chrono::steady_clock::time_point startTime;
+
         void onMessage(boost_socket& socket,
             boost_request const& request);
         void onHiveOSGetStats(boost_socket& socket,

@@ -24,6 +24,8 @@ bool api::ServerAPI::bind()
 
     alive.store(true, boost::memory_order::seq_cst);
 
+    startTime = std::chrono::steady_clock::now();
+
     threadDoAccept.interrupt();
     threadDoAccept = boost_thread{ boost::bind(&api::ServerAPI::loopAccept, this) };
 
@@ -240,7 +242,6 @@ void api::ServerAPI::onMinerStatus(
     boost_response& response)
 {
     ////////////////////////////////////////////////////////////////////////////
-    // Version
     std::string version
     {
         std::to_string(common::VERSION_MAJOR)
@@ -249,18 +250,23 @@ void api::ServerAPI::onMinerStatus(
     };
 
     ////////////////////////////////////////////////////////////////////////////
-    // Root object
+    auto now = std::chrono::steady_clock::now();
+    uint64_t uptimeSeconds =
+        std::chrono::duration_cast<std::chrono::seconds>(now - startTime).count();
+
+    ////////////////////////////////////////////////////////////////////////////
+
     boost::json::object root
     {
         { "gpus", boost::json::array{} },
-        { "uptime", 0 },
+        { "uptime", uptimeSeconds },
         { "ver", version }
     };
 
     boost::json::array gpus{};
 
     ////////////////////////////////////////////////////////////////////////////
-    // Totals
+
     uint64_t sharesValid{ 0ull };
     uint64_t sharesInvalid{ 0ull };
 
